@@ -60,7 +60,7 @@ services:
       - 8.8.8.8
       - 8.8.4.4
     restart: unless-stopped
-    command: streamlit run dashboard/streamlit_app.py --server.port 8501 --server.headless true
+    command: streamlit run dashboard/streamlit_app.py --server.port 8501 --server.headless true --server.enableCORS false --server.enableXsrfProtection false
 
   api:
     build: .

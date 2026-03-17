@@ -1,0 +1,82 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: poly-autobet
+    environment:
+      - TRADING_MODE=paper
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=sqlite+aiosqlite:///./db/polybet.db
+      - NODE_ROLE=brain
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/app
+      - ./db:/app/db
+      - app_logs:/app/logs
+    depends_on:
+      - redis
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    restart: unless-stopped
+    command: python main.py --mode paper
+
+  redis:
+    image: redis:7-alpine
+    container_name: poly-autobet-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  streamlit:
+    build: .
+    container_name: poly-autobet-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=sqlite+aiosqlite:///./db/polybet.db
+    env_file:
+      - .env
+    volumes:
+      - ./db:/app/db
+    depends_on:
+      - redis
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    restart: unless-stopped
+    command: streamlit run dashboard/streamlit_app.py --server.port 8501 --server.headless true
+
+  api:
+    build: .
+    container_name: poly-autobet-api
+    ports:
+      - "8601:8601"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=sqlite+aiosqlite:///./db/polybet.db
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./db:/app/db
+    depends_on:
+      - redis
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    restart: unless-stopped
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8601
+
+volumes:
+  app_logs:
+  redis_data:

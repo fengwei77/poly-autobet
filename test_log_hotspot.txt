@@ -1,0 +1,70 @@
+2026-03-16 16:48:26.815 | INFO     | __main__:test_interactive_trade:18 - \U0001f680 啟動 Telegram 互動測試 (手動審核模式)...
+2026-03-16 16:48:26.815 | INFO     | notifications.telegram_bot:initialize:44 - \U0001f4f1 Telegram Bot: Initializing background setup task...
+2026-03-16 16:48:26.815 | INFO     | __main__:test_interactive_trade:24 - \u23f3 正在強制等待 Telegram 背景初始化...
+2026-03-16 16:48:26.815 | INFO     | notifications.telegram_bot:_setup_async:60 - \U0001f4f1 Telegram Bot: Starting basic setup with token: 87830***
+2026-03-16 16:48:27.351 | INFO     | notifications.telegram_bot:_setup_async:63 - \U0001f4f1 Telegram Bot: Basic sender initialized
+2026-03-16 16:48:27.351 | INFO     | notifications.telegram_bot:_setup_async:71 - \U0001f4f1 Telegram Bot: Attempting to start Interactive Mode (Polling)...
+2026-03-16 16:48:27.863 | INFO     | __main__:test_interactive_trade:45 - \U0001f4e4 正在發送互動式訊息到 Telegram...
+2026-03-16 16:48:40.579 | SUCCESS  | notifications.telegram_bot:_setup_async:94 - \u2705 Telegram Bot: Interactive Mode (Polling) started successfully
+2026-03-16 16:48:47.873 | WARNING  | notifications.telegram_bot:notify_opportunity_with_buttons:189 - Standard opportunity notification failed: Timed out. Trying sync fallback...
+2026-03-16 16:48:57.279 | SUCCESS  | notifications.telegram_bot:notify_opportunity_with_buttons:211 - \u2705 Opportunity sync fallback success!
+2026-03-16 16:48:57.279 | SUCCESS  | __main__:test_interactive_trade:50 - \u2705 訊息已發送！請檢查您的 Telegram 並嘗試點擊 [批准] 或 [拒絕]。
+2026-03-16 16:48:57.279 | INFO     | __main__:test_interactive_trade:51 - \u23f3 腳本將保持運行 120 秒，等待您的點擊反饋...
+2026-03-16 16:48:57.280 | INFO     | notifications.telegram_bot:_handle_callback:104 - \U0001f518 Telegram Callback received: data=approve|test_cond_123
+Exception happened while polling for updates.
+Traceback (most recent call last):
+  File "D:\Docker_Site\poly-autobet\.venv\Lib\site-packages\telegram\ext\_utils\networkloop.py", line 161, in network_retry_loop
+    await do_action()
+  File "D:\Docker_Site\poly-autobet\.venv\Lib\site-packages\telegram\ext\_utils\networkloop.py", line 154, in do_action
+    action_cb_task.result()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Docker_Site\poly-autobet\.venv\Lib\site-packages\telegram\ext\_updater.py", line 340, in polling_action_cb
+    updates = await self.bot.get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "D:\Docker_Site\poly-autobet\.venv\Lib\site-packages\telegram\ext\_extbot.py", line 671, in get_updates
+    updates = await super().get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "D:\Docker_Site\poly-autobet\.venv\Lib\site-packages\telegram\_bot.py", line 4860, in get_updates
+    await self._post(
+    ^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+    ),
+    ^
+  File "D:\Docker_Site\poly-autobet\.venv\Lib\site-packages\telegram\_bot.py", line 703, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "D:\Docker_Site\poly-autobet\.venv\Lib\site-packages\telegram\ext\_extbot.py", line 369, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "D:\Docker_Site\poly-autobet\.venv\Lib\site-packages\telegram\_bot.py", line 732, in _do_post
+    result = await request.post(
+             ^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "D:\Docker_Site\poly-autobet\.venv\Lib\site-packages\telegram\request\_baserequest.py", line 198, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+    )
+    ^
+  File "D:\Docker_Site\poly-autobet\.venv\Lib\site-packages\telegram\request\_baserequest.py", line 375, in _request_wrapper
+    raise exception
+telegram.error.Conflict: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+2026-03-16 16:49:02.349 | WARNING  | notifications.telegram_bot:_handle_callback:109 - Failed to answer query: Query is too old and response timeout expired or query id is invalid
+2026-03-16 16:49:02.349 | INFO     | notifications.telegram_bot:_handle_callback:117 - Processing action: approve for market_id: test_cond_123
+2026-03-16 16:49:32.353 | ERROR    | notifications.telegram_bot:_handle_callback:128 - Failed to edit message for approve: Timed out
+2026-03-16 16:49:32.353 | INFO     | infra.redis_client:publish:114 - \U0001f4e3 [In-Memory Pub] signal:manual_approve:test_cond_123 -> APPROVED
+2026-03-16 16:50:56.494 | INFO     | notifications.telegram_bot:_handle_callback:104 - \U0001f518 Telegram Callback received: data=approve|test_cond_123

@@ -1,0 +1,17 @@
+Traceback (most recent call last):
+  File "D:\Docker_Site\poly-autobet\scripts\stress_test_ws.py", line 67, in <module>
+    asyncio.run(run_stress_test())
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Python313\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "D:\Docker_Site\poly-autobet\scripts\stress_test_ws.py", line 13, in run_stress_test
+    print(f"\U0001f680 Starting WebSocket / Redis stress test...")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'cp950' codec can't encode character '\U0001f680' in position 0: illegal multibyte sequence

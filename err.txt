@@ -1,0 +1,20 @@
+FF                                                                       [100%]
+================================== FAILURES ===================================
+____________________ test_exceeding_max_exposure_rejected _____________________
+tests\test_trade_executor.py:36: in test_exceeding_max_exposure_rejected
+    risk_manager.settings.max_daily_exposure = 500.0
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'RiskManager' object has no attribute 'settings'
+______________________ test_live_execution_token_mapping ______________________
+tests\test_trade_executor.py:78: in test_live_execution_token_mapping
+    assert trade_result["status"] == "pending"
+E   AssertionError: assert 'error' == 'pending'
+E     
+E     - pending
+E     + error
+---------------------------- Captured stderr call -----------------------------
+2026-03-16 13:35:51.418 | ERROR    | core.trade_executor:_live_trade:200 - Live trade failed: No module named 'py_clob_client'
+=========================== short test summary info ===========================
+FAILED tests/test_trade_executor.py::test_exceeding_max_exposure_rejected - A...
+FAILED tests/test_trade_executor.py::test_live_execution_token_mapping - Asse...
+2 failed in 0.55s

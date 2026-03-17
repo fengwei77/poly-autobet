@@ -1,0 +1,73 @@
+[tool.poetry]
+name = "poly-autobet"
+version = "0.1.0"
+description = "Polymarket Weather Market Auto-Betting System"
+authors = ["dalei2025"]
+readme = "README.md"
+packages = [{include = "config"}, {include = "core"}, {include = "infra"}, {include = "data"}, {include = "analysis"}, {include = "notifications"}, {include = "dashboard"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+# Async networking
+httpx = {version = "^0.27.0", extras = ["http2"]}
+aiohttp = "^3.9.3"
+websockets = "^12.0"
+
+# Polymarket trading
+py-clob-client = "^0.18.0"
+web3 = "^6.0.0"
+
+# AI analysis (MiniMax 2.5 via OpenAI-compatible SDK)
+openai = "^1.30.0"
+instructor = "^1.2.0"
+
+# Data processing
+pandas = "^2.2.0"
+numpy = "^1.26.0"
+
+# Cache, DB
+redis = {version = "^5.0.3", extras = ["hiredis"]}
+sqlalchemy = {version = "^2.0.29", extras = ["asyncio"]}
+aiosqlite = "^0.20.0"
+alembic = "^1.13.1"
+
+# Web dashboard & notifications
+fastapi = "^0.110.0"
+uvicorn = "^0.29.0"
+streamlit = "^1.33.0"
+python-telegram-bot = {version = "^21.0", extras = ["job-queue"]}
+
+# Engineering tools
+pydantic = "^2.6.0"
+pydantic-settings = "^2.2.0"
+python-dotenv = "^1.0.0"
+loguru = "^0.7.2"
+orjson = "^3.9.15"
+click = "^8.1.7"
+apscheduler = "^3.10.4"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1.1"
+pytest-asyncio = "^0.23.6"
+pytest-cov = "^5.0.0"
+ruff = "^0.3.5"
+aioresponses = "^0.7.6"
+
+[tool.poetry.scripts]
+polybet = "main:cli"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

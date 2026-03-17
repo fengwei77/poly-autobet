@@ -10,7 +10,7 @@ from typing import Optional
 
 from loguru import logger
 
-from config.settings import settings
+from config.settings import settings, TradingMode
 from data.database import async_session
 from data.models import Trade
 from infra.redis_client import redis_client
@@ -20,6 +20,9 @@ from sqlalchemy import select, func
 
 class RiskManager:
     """Risk control engine — every trade MUST pass all checks before execution."""
+
+    # Allow settings to be overridden for testing
+    settings = settings
 
     async def check_trade(self, signal: dict) -> tuple[bool, str]:
         """
@@ -103,10 +106,10 @@ class RiskManager:
 
     async def _get_total_nav(self) -> float:
         """Get Total Net Asset Value (Cash + Position Value)."""
-        if settings.trading_mode == "live":
-            # In live mode, we'd fetch balance + positions from CLOB client
-            # For now, return a placeholder or use settings
-            return 1000.0 # Default live bankroll placeholder
+        if settings.trading_mode == TradingMode.LIVE:
+            # Use configured live bankroll from settings
+            # TODO: Integrate with CLOB client to fetch actual wallet balance
+            return settings.live_bankroll
         else:
             # Paper mode: assume 10,000 USDC starting capital
             return 10000.0

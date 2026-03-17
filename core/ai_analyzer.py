@@ -189,8 +189,12 @@ class AIAnalyzer:
 
         # Step 2: AI deep analysis (if provider available)
         ai_result = None
-        # In Paper mode, we lower the threshold to 1% edge to see more "thinking" results
-        trigger_threshold = 0.01 if settings.trading_mode.value == "paper" else 0.03
+        # Get trigger threshold from settings based on trading mode
+        trigger_threshold = (
+            settings.ai_trigger_threshold_paper
+            if settings.trading_mode.value == "paper"
+            else settings.ai_trigger_threshold_live
+        )
         if self._client and stat_result.get("edge", 0) > trigger_threshold:
             ai_result = await self._ai_analysis(market, weather, stat_result)
 

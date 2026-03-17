@@ -39,7 +39,8 @@
       "Bash(dig:*)",
       "Bash(cloudflared:*)",
       "Bash(taskkill:*)",
-      "Bash(\"C:\\\\Users\\\\Luke\\\\.cloudflared\\\\cloudflared.exe\" --version)"
+      "Bash(\"C:\\\\Users\\\\Luke\\\\.cloudflared\\\\cloudflared.exe\" --version)",
+      "Bash(poetry lock:*)"
     ]
   }
 }

@@ -69,11 +69,13 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
     telegram_webhook_secret: str = ""
+    telegram_webhook_base_url: str = ""  # Webhook URL without path, e.g., https://your-domain.com
 
     # === Trading Settings ===
     trading_mode: TradingMode = TradingMode.PAPER
     node_role: NodeRole = NodeRole.BRAIN
     delegate_execution: bool = False  # If True, Brain node publishes to Redis instead of executing locally
+    live_bankroll: float = 1000.0  # Actual bankroll for live trading (used for risk calculations)
     max_daily_exposure: float = 500.0
     max_single_bet: float = 50.0
     min_single_bet: float = 2.0
@@ -104,6 +106,10 @@ class Settings(BaseSettings):
     scalping_take_profit_pct: float = 0.15  # 15% 停利
     scalping_stop_loss_pct: float = 0.10   # 10% 停損
 
+    # === AI Analysis ===
+    ai_trigger_threshold_paper: float = 0.01   # Edge threshold for AI analysis in paper mode
+    ai_trigger_threshold_live: float = 0.03   # Edge threshold for AI analysis in live mode
+
     @property
     def is_brain(self) -> bool:
         return self.node_role == NodeRole.BRAIN
@@ -122,17 +128,30 @@ class Settings(BaseSettings):
     def validate(self) -> list[str]:
         """Validate critical settings on startup."""
         errors = []
+
+        # Live mode requires Polymarket credentials
         if self.is_live:
-            if not self.polymarket_private_key: errors.append("polymarket_private_key")
-            if not self.polymarket_api_key: errors.append("polymarket_api_key")
-            
+            if not self.polymarket_private_key:
+                errors.append("polymarket_private_key")
+            if not self.polymarket_api_key:
+                errors.append("polymarket_api_key")
+            if not self.polymarket_api_secret:
+                errors.append("polymarket_api_secret")
+
+        # AI provider requires corresponding API key
         if self.ai_provider == "minimax" and not self.minimax_api_key:
             errors.append("minimax_api_key")
         elif self.ai_provider == "openai" and not self.openai_api_key:
             errors.append("openai_api_key")
-            
-        if not self.telegram_bot_token: errors.append("telegram_bot_token")
-        
+        elif self.ai_provider == "deepseek" and not self.deepseek_api_key:
+            errors.append("deepseek_api_key")
+        elif self.ai_provider == "kimi" and not self.kimi_api_key:
+            errors.append("kimi_api_key")
+
+        # Telegram notification (optional but validated if set)
+        if not self.telegram_bot_token:
+            errors.append("telegram_bot_token")
+
         return errors
 
 
@@ -142,5 +161,17 @@ settings = Settings()
 def reload_settings():
     """Manually reload settings from .env"""
     global settings
+    # Force pydantic-settings to re-read from .env by explicitly specifying the file
+    # and clearing any cached values
+    import os
+    # Reload environment from .env file
+    if os.path.exists(".env"):
+        with open(".env", "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    os.environ[key.strip()] = value.strip()
+    # Create new Settings instance with reloaded env
     settings = Settings()
     logger.info("♻️ Settings reloaded from .env")

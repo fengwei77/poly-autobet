@@ -41,4 +41,4 @@ htmlcov/
 .pytest_cache/
 
 # Poetry
-poetry.lock
+# poetry.lock should be committed to ensure reproducible builds

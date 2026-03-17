@@ -40,9 +40,17 @@ except ImportError:
 
 
 # ── Webhook 相關設定 ─────────────────────────────────────────────
-WEBHOOK_BASE_URL = "https://telegram-webhook.otter-labs.website"
+# NOTE: WEBHOOK_BASE_URL should be configured in settings.telegram_webhook_base_url
+# If not set, Webhook mode will be skipped
 WEBHOOK_PATH     = "/webhook/telegram"
-WEBHOOK_URL      = f"{WEBHOOK_BASE_URL}{WEBHOOK_PATH}"
+
+def get_webhook_url() -> str:
+    """Get webhook URL from settings or return empty string."""
+    from config.settings import settings
+    base_url = settings.telegram_webhook_base_url
+    if not base_url:
+        return ""
+    return f"{base_url}{WEBHOOK_PATH}"
 
 
 class TelegramNotifier:
@@ -103,20 +111,25 @@ class TelegramNotifier:
             self._bot = self._app.bot
 
             # 向 Telegram 伺服器設定 Webhook
+            webhook_url = get_webhook_url()
+            if not webhook_url:
+                logger.warning("⚠️ Telegram Webhook URL 未設定，跳過 Webhook 設定")
+                return
             await self._register_webhook()
 
-            logger.success(f"✅ Telegram Bot: Webhook 模式啟動，端點：{WEBHOOK_URL}")
+            logger.success(f"✅ Telegram Bot: Webhook 模式啟動，端點：{webhook_url}")
 
         except Exception as e:
             logger.error(f"❌ Telegram Bot 初始化失敗：{e}")
 
-    async def _register_webhook(self):
+    async def _register_webhook(self, webhook_url: str = ""):
         """
         向 Telegram API 登記 Webhook URL。
         Telegram 收到使用者訊息後，會主動 POST 到這個 URL。
         """
         try:
-            webhook_url = WEBHOOK_URL
+            if not webhook_url:
+                webhook_url = get_webhook_url()
 
             # 如果有設定 secret，加上防偽造驗證
             secret = getattr(settings, "telegram_webhook_secret", None)

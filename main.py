@@ -214,7 +214,13 @@ async def notification_loop(shutdown_event: asyncio.Event):
                 continue
                 
             try:
-                result = json_loads(message["data"])
+                # Check message type before accessing data
+                if message.get("type") != "message":
+                    continue
+                raw_data = message.get("data")
+                if not raw_data:
+                    continue
+                result = json_loads(raw_data)
                 # Send to Telegram
                 await notifier.notify_trade(result)
             except Exception as e:
@@ -312,20 +318,23 @@ async def main_loop():
         executor_track_task.cancel()
         try:
             await asyncio.gather(listener_task, notif_task, executor_track_task, return_exceptions=True)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Task cancellation: {e}")
 
         try:
             from core.scanner import scanner
             if scanner:
                 await scanner.close()
-        except: pass
-        
+        except Exception as e:
+            logger.warning(f"Error closing scanner: {e}")
+
         try:
             from core.weather_collector import weather_collector
             if weather_collector:
                 await weather_collector.close()
-        except: pass
+        except Exception as e:
+            logger.warning(f"Error closing weather_collector: {e}")
+
         await redis_client.close()
         await close_db()
         logger.info("👋 Poly-AutoBet shutdown complete.")

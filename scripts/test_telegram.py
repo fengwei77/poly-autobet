@@ -11,7 +11,7 @@ async def run_test():
     print("Initializing Telegram Bot...")
     await notifier.initialize()
     print("Sending test message...")
-    success = await notifier.send("🔔 <b>Poly-AutoBet 手動測試</b>\n\n如果您收到此訊息，表示您的 Telegram Bot 與 Chat ID 設定完全正確！\n\n目前系統已進入自動化監控狀態，祝您投資獲利！")
+    success = await notifier.send("🔔 <b>POLY DREAM 手動測試</b>\n\n如果您收到此訊息，表示您的 Telegram Bot 與 Chat ID 設定完全正確！\n\n目前系統已進入自動化監控狀態，祝您投資獲利！")
     
     if success:
         print("✅ 測試訊息發送成功！請檢查您的 Telegram 手機 App。")

@@ -40,7 +40,16 @@
       "Bash(cloudflared:*)",
       "Bash(taskkill:*)",
       "Bash(\"C:\\\\Users\\\\Luke\\\\.cloudflared\\\\cloudflared.exe\" --version)",
-      "Bash(poetry lock:*)"
+      "Bash(poetry lock:*)",
+      "Bash(./cloudflared.exe service:*)",
+      "Bash(findstr 8601)",
+      "Bash(findstr python:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker cp:*)",
+      "Bash(docker restart:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

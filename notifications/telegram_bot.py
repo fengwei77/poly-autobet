@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import hmac
 import hashlib
+from datetime import datetime
 from typing import Optional
 from loguru import logger
 from config.settings import settings
@@ -25,7 +26,7 @@ from infra.redis_client import redis_client
 
 try:
     from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
-    from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler
+    from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
     from telegram.request import HTTPXRequest
 except ImportError:
     logger.warning("python-telegram-bot not installed.")
@@ -50,7 +51,7 @@ def get_webhook_url() -> str:
     base_url = settings.telegram_webhook_base_url
     if not base_url:
         return ""
-    return f"{base_url}{WEBHOOK_PATH}"
+    return f"{base_url.rstrip('/')}{WEBHOOK_PATH}"
 
 
 class TelegramNotifier:
@@ -101,8 +102,15 @@ class TelegramNotifier:
                 .build()
             )
 
-            # 註冊按鈕回呼處理器
+            # 註冊處理器
             self._app.add_handler(CallbackQueryHandler(self._handle_callback))
+            self._app.add_handler(CommandHandler("status", self._handle_status))
+            self._app.add_handler(CommandHandler("help", self._handle_help))
+            self._app.add_handler(CommandHandler("start", self._handle_help))
+            self._app.add_handler(CommandHandler("refresh", self._handle_refresh))
+            
+            # 增加訊息處理器 (處理非指令的文字)
+            self._app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), self._handle_message))
 
             await self._app.initialize()
             # 注意：不呼叫 start_polling()，改用 Webhook
@@ -201,6 +209,107 @@ class TelegramNotifier:
         except Exception as e:
             logger.error(f"❌ Webhook 處理失敗：{e}")
             return False
+
+    # ════════════════════════════════════════════════════════════════
+    # 指令處理 (Commands)
+    # ════════════════════════════════════════════════════════════════
+    async def _handle_status(self, update: Update, context):
+        """處理 /status 指令，顯示目前損益與本金。"""
+        from core.stats_manager import stats_manager
+        
+        logger.info("📊 Telegram Command: /status from user")
+        try:
+            stats = await stats_manager.get_summary()
+            
+            mode_str = "📝 模擬交易 (Paper)" if stats["mode"] == "paper" else "💰 實盤交易 (Live)"
+            
+            msg = (
+                f"📊 <b>POLY DREAM 系統狀態</b>\n\n"
+                f"運作模式: {mode_str}\n"
+                f"初始本金: ${stats['initial_bankroll']:.2f} USDC\n"
+                f"目前餘額: <b>${stats['current_balance']:.2f} USDC</b> (含浮盈虧)\n\n"
+                f"📈 <b>收益統計</b>\n"
+                f"今日損益: {self._fmt_pnl(stats['today_pnl'])}\n"
+                f"已實現損益: <b>{self._fmt_pnl(stats['total_pnl'])}</b>\n"
+                f"場內未實現: <b>{self._fmt_pnl(stats['unrealized_pnl'])}</b>\n\n"
+                f"🔍 <b>運行數據</b>\n"
+                f"當前持倉數: {stats['active_positions']}\n"
+                f"累計投入額: ${stats['total_invested']:.2f} USDC\n\n"
+                f"🕒 更新時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+            
+            await update.message.reply_text(msg, parse_mode="HTML")
+        except Exception as e:
+            logger.error(f"Failed to handle /status: {e}")
+            await update.message.reply_text(f"❌ 無法獲取狀態：{str(e)}")
+
+    async def _handle_help(self, update: Update, context):
+        """顯示說明訊息。"""
+        msg = (
+            f"🤖 <b>POLY DREAM 助手指令</b>\n\n"
+            f"/status - 查詢目前收益、本金及持倉\n"
+            f"/refresh - 立即觸發一次市場掃描\n"
+            f"/help - 顯示此說明文件\n\n"
+            f"當系統發現潛在機會時，會主動發送按鈕供您審核。"
+        )
+        await update.message.reply_text(msg, parse_mode="HTML")
+
+    async def _handle_refresh(self, update: Update, context):
+        """立即觸發掃描。"""
+        logger.info("🔍 Telegram Command: /refresh (Manual Scan Trigger)")
+        await redis_client.publish("signal:manual_scan", "trigger")
+        await update.message.reply_text("✅ 已發送立即掃描指令，請稍後查看通知。", parse_mode="HTML")
+
+    async def _handle_message(self, update: Update, context):
+        """處理使用者的文字訊息（AI 聊天）。"""
+        from core.ai_analyzer import AIAnalyzer
+        from core.stats_manager import stats_manager
+        from sqlalchemy import select
+        from data.models import Market
+        from data.database import async_session
+
+        user_text = update.message.text
+        logger.info(f"💬 Telegram AI Chat: user asked '{user_text}'")
+
+        # 傳送 "正在打字..."
+        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+
+        try:
+            # 1. 準備背景資訊
+            stats = await stats_manager.get_summary()
+            
+            # 2. 獲取最近市場快照 (選前 5 個)
+            recent_markets = []
+            async with async_session() as session:
+                query = select(Market).where(Market.is_active == True).limit(5)
+                res = await session.execute(query)
+                for m in res.scalars():
+                    recent_markets.append({
+                        "city": m.city,
+                        "question": m.question,
+                        "yes_price": m.yes_price
+                    })
+            
+            context_data = {
+                **stats,
+                "active_markets_count": len(recent_markets), # This is just a sample
+                "recent_markets": recent_markets
+            }
+
+            # 3. 呼叫 AI
+            analyzer = AIAnalyzer()
+            answer = await analyzer.ask_ai(user_text, context_data)
+
+            # 4. 回覆使用者
+            await update.message.reply_text(answer)
+        except Exception as e:
+            logger.error(f"Failed to handle AI chat: {e}")
+            await update.message.reply_text(f"抱歉，我暫時無法處理您的問題。")
+
+    def _fmt_pnl(self, val: float) -> str:
+        """格式化損益文字。"""
+        icon = "🟢" if val >= 0 else "🔴"
+        return f"{icon} {val:+.2f} USDC"
 
     # ════════════════════════════════════════════════════════════════
     # 按鈕回呼處理（邏輯與原本完全相同）

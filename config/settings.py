@@ -91,7 +91,7 @@ class Settings(BaseSettings):
     max_capital_utilization: float = 0.8
 
     # === Scanning ===
-    scan_interval_minutes: int = 15
+    scan_interval_minutes: float = 0.75  # 45 seconds (15 min / 20)
     deep_analysis_interval_minutes: int = 60
     auto_exit_hours_before_resolution: int = 1
 

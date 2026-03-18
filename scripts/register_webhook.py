@@ -1,9 +1,16 @@
 import requests
 import json
 
-token = "8783061433:AAHXKmQPyRO8Yg8HoIhBS9yrR-uJ1QGtQ-E"
-url = "https://tg-webhook.otter-labs.website/webhook/telegram"
-secret = "poly_autobet_secret_2024"
+import os
+from config.settings import settings
+
+token = settings.telegram_bot_token
+base_url = settings.telegram_webhook_base_url or "http://localhost:8601"
+secret = settings.telegram_webhook_secret
+
+# Ensure base_url ends correctly
+base_url = base_url.rstrip("/")
+url = f"{base_url}/webhook/telegram"
 
 # 1. 註冊 Webhook
 print(f"📡 正在嘗試註冊 Webhook 至: {url}")

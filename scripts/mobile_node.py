@@ -1,5 +1,5 @@
 """
-Poly-AutoBet: Mobile Execution Node (Termux/UserLAnd)
+POLY DREAM: Mobile Execution Node (Termux/UserLAnd)
 Listens to Redis Pub/Sub for trade signals and executes them locally to minimize latency
 and keep private keys secure on the mobile device.
 """
@@ -55,7 +55,7 @@ async def mobile_node_loop():
     from data.database import init_db
     
     env = detect_environment()
-    logger.info("📱 Poly-AutoBet Mobile Execution Node Starting...")
+    logger.info("📱 POLY DREAM Mobile Execution Node Starting...")
     logger.info(f"   Platform: {env['platform']} ({env['architecture']})")
     
     # Initialize infrastructure

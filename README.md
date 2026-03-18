@@ -1,4 +1,4 @@
-# Poly-AutoBet
+# POLY DREAM
 
 Polymarket 天氣市場自動投注系統。當天氣預報機率高於市場價格 5% 以上時，自動執行套利交易。
 

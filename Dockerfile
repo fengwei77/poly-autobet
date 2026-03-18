@@ -45,6 +45,7 @@ RUN pip install --no-cache-dir --break-system-packages \
     "orjson>=3.9.15" \
     "click>=8.1.7" \
     "apscheduler>=3.10.4" \
+    "streamlit-autorefresh>=0.0.1" \
     "pytest>=8.1.1" \
     "pytest-asyncio>=0.23.6" \
     2>/dev/null || true

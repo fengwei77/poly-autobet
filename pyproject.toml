@@ -36,6 +36,7 @@ alembic = "^1.13.1"
 fastapi = "^0.110.0"
 uvicorn = "^0.29.0"
 streamlit = "^1.33.0"
+streamlit-autorefresh = "^0.0.1"
 python-telegram-bot = {version = "^21.0", extras = ["job-queue"]}
 
 # Engineering tools

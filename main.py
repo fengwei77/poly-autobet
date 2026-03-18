@@ -56,7 +56,7 @@ async def run_scan_cycle():
     # We only trade on high-volume, identified cities.
     active_liquid = [m for m in markets if m["volume"] > 100.0 and m["city"] != "unknown"]
     active_liquid.sort(key=lambda x: x["volume"], reverse=True)
-    top_targets = active_liquid[:10]
+    top_targets = active_liquid[:200]
     
     logger.info(f"🎯 Selected {len(top_targets)} high-quality targets for deep analysis")
 
@@ -192,6 +192,31 @@ async def market_price_listener_loop(shutdown_event: asyncio.Event):
         await pubsub.unsubscribe(channel)
 
 
+async def manual_scan_listener(shutdown_event: asyncio.Event):
+    """Listens for manual scan triggers from Redis (usually from dashboard)."""
+    from infra.redis_client import redis_client
+    
+    channel = "signal:manual_scan"
+    pubsub = redis_client._client.pubsub()
+    await pubsub.subscribe(channel)
+    
+    logger.info("🎧 Manual scan listener active")
+    
+    try:
+        while not shutdown_event.is_set():
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+            if not message:
+                continue
+            
+            logger.info("⚡ [MANUAL] Triggering immediate scan cycle via Redis signal")
+            asyncio.create_task(run_scan_cycle())
+            
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await pubsub.unsubscribe(channel)
+
+
 async def notification_loop(shutdown_event: asyncio.Event):
     """Listens for internal signals and sends Telegram/system notifications."""
     from infra.redis_client import redis_client
@@ -241,7 +266,7 @@ async def main_loop():
 
     # Log environment info
     env = detect_environment()
-    logger.info("🚀 Poly-AutoBet Starting...")
+    logger.info("🚀 POLY DREAM Starting...")
     logger.info(f"   Platform: {env['platform']} ({env['architecture']})")
     logger.info(f"   Python: {env['python_version']}")
     logger.info(f"   uvloop: {'✅' if env['uvloop_available'] else '❌'}")
@@ -286,6 +311,7 @@ async def main_loop():
     # Start background tasks
     listener_task = asyncio.create_task(market_price_listener_loop(shutdown_event))
     notif_task = asyncio.create_task(notification_loop(shutdown_event))
+    manual_scan_task = asyncio.create_task(manual_scan_listener(shutdown_event))
     
     # Order Status tracking for Live mode
     from core.trade_executor import trade_executor
@@ -317,7 +343,7 @@ async def main_loop():
         notif_task.cancel()
         executor_track_task.cancel()
         try:
-            await asyncio.gather(listener_task, notif_task, executor_track_task, return_exceptions=True)
+            await asyncio.gather(listener_task, notif_task, manual_scan_task, executor_track_task, return_exceptions=True)
         except Exception as e:
             logger.debug(f"Task cancellation: {e}")
 
@@ -337,13 +363,13 @@ async def main_loop():
 
         await redis_client.close()
         await close_db()
-        logger.info("👋 Poly-AutoBet shutdown complete.")
+        logger.info("👋 POLY DREAM shutdown complete.")
 
 
 @click.command()
 @click.option("--mode", type=click.Choice(["monitor", "paper", "live", "backtest"]), default=None)
 def cli(mode: str | None):
-    """Poly-AutoBet: Polymarket Weather Market Auto-Betting System"""
+    """POLY DREAM: Polymarket Weather Market Auto-Betting System"""
     from infra.event_loop import setup_event_loop
     from config.settings import settings
 

@@ -28,7 +28,9 @@ GAMMA_API_BASE = "https://gamma-api.polymarket.com"
 WEATHER_KEYWORDS = [
     "temperature", "weather", "rain", "precipitation",
     "snow", "wind", "heat", "cold", "forecast", "degrees", "celsius", "fahrenheit",
-    "temp-high", "temp-low", "weather-forecast"
+    "temp-high", "temp-low", "weather-forecast",
+    "hurricane", "tornado", "storm", "flood", "smoke", "drought", "climate", "meteorology",
+    "humidity", "pressure", "barometer", "earthquake", "cyclone", "typhoon", "blizzard"
 ]
 
 
@@ -87,7 +89,10 @@ class MarketScanner:
         markets = await self._fetch_all_events()
         weather_markets = await self._filter_weather_markets(markets)
 
-        logger.info(f"🔍 Found {len(weather_markets)} weather markets from {len(markets)} total events")
+        if weather_markets:
+            logger.success(f"🔍 Discovered {len(weather_markets)} weather markets from {len(markets)} events")
+        else:
+            logger.warning(f"⚠️ No weather markets found among {len(markets)} events")
 
         # Cache for 10 minutes
         if weather_markets:

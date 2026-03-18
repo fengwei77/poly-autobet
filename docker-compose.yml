@@ -53,6 +53,7 @@ services:
     env_file:
       - .env
     volumes:
+      - .:/app
       - ./db:/app/db
     depends_on:
       - redis
@@ -75,6 +76,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
+      - .:/app
       - ./db:/app/db
     depends_on:
       redis:

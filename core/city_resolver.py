@@ -1,5 +1,5 @@
 """
-Core: City Resolver — Resolves city IDs from text using static maps, DB aliases, and AI fallback.
+Core: City Resolver — Resolves city IDs from text using DB cities, aliases, and AI fallback.
 """
 
 from __future__ import annotations
@@ -7,9 +7,8 @@ from __future__ import annotations
 import re
 from typing import Optional
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, text
 
-from config.cities import CITIES
 from data.models import CityAlias
 from data.database import async_session
 
@@ -17,7 +16,7 @@ from data.database import async_session
 class CityResolver:
     """
     Intelligent city identification layer.
-    Flow: Static List -> Database Aliases -> AI Extraction -> Persistent Save.
+    Flow: Database Cities -> Manual Overrides -> Database Aliases -> AI Extraction.
     """
 
     def __init__(self):
@@ -29,63 +28,93 @@ class CityResolver:
             "chi": "chicago",
             "atx": "austin",
         }
+        # Cache for city lookup
+        self._cities_cache: Optional[list[dict]] = None
+
+    async def _load_cities(self) -> list[dict]:
+        """Load all cities from database into cache."""
+        if self._cities_cache is None:
+            async with async_session() as session:
+                result = await session.execute(text("SELECT city_id, name FROM cities"))
+                self._cities_cache = [{"city_id": r[0], "name": r[1]} for r in result.fetchall()]
+        return self._cities_cache
 
     async def resolve_city(self, text: str) -> str:
         """
         Main entry point to identify a city ID from text.
         """
         text_lower = text.lower()
+        # Normalize text: replace hyphens with spaces for matching
+        text_normalized = text_lower.replace("-", " ")
 
-        # 1. 靜態匹配 (Static Map)
-        for city_id, cfg in CITIES.items():
-            if cfg.name.lower() in text_lower:
-                return city_id
-            for tag in cfg.polymarket_tags:
-                if tag.lower().replace("-", " ") in text_lower.replace("-", " "):
-                    return city_id
-
-        # 2. 手動常用縮寫 (Hardcoded Overrides)
-        for alias, city_id in self._manual_overrides.items():
-            if re.search(rf"\b{alias}\b", text_lower):
-                return city_id
-
-        # 3. 資料庫別名表 (Database Aliases)
+        # 1. Database Aliases FIRST - before cities to handle duplicates (like Odessa US vs Odesa UA)
         db_city_id = await self._check_db_aliases(text_lower)
         if db_city_id:
             return db_city_id
 
-        # 4. AI 萃取 (AI Extraction Fallback)
+        # 2. Manual Overrides
+        for alias, city_id in self._manual_overrides.items():
+            if re.search(rf"\b{alias}\b", text_lower):
+                return city_id
+
+        # 3. Database Cities (loaded from SQL migration)
+        # Use word boundary matching to avoid partial matches
+        cities = await self._load_cities()
+        for city in cities:
+            city_name = city["name"].lower()
+            city_id_normalized = city["city_id"].lower().replace("_", " ")
+
+            # Check if city name appears as whole word in text
+            if re.search(rf"\b{re.escape(city_name)}\b", text_normalized):
+                return city["city_id"]
+
+            # Check if city_id (with underscores replaced) appears as whole word
+            if re.search(rf"\b{re.escape(city_id_normalized)}\b", text_normalized):
+                return city["city_id"]
+
+        # 4. AI Extraction Fallback
         from core.ai_analyzer import ai_analyzer
         ai_name = await ai_analyzer.extract_city(text)
         if ai_name and ai_name.lower() != "unknown":
-            resolved_id = self._map_to_existing_city(ai_name)
-            if resolved_id != "unknown":
-                # 自動學習：將此 AI 辨識出的別名存入資料庫，下次直接秒讀
+            # Try to map AI result to our cities
+            resolved_id = await self._map_ai_city(ai_name)
+            if resolved_id:
+                # Auto-learn: save alias to database for faster lookup next time
                 await self._save_alias(ai_name.lower(), resolved_id)
                 logger.info(f"💡 CityResolver learned: '{ai_name}' -> {resolved_id}")
                 return resolved_id
+            else:
+                # Return the detected city name (even if not in our tracked list)
+                logger.debug(f"📍 Detected untracked city: {ai_name}")
+                return ai_name.lower().replace(" ", "_")
 
         return "unknown"
 
     async def _check_db_aliases(self, text: str) -> Optional[str]:
         """Check the database for any known aliases in the text."""
         async with async_session() as session:
-            # We fetch all verified aliases (could be cached in Redis for production)
             result = await session.execute(select(CityAlias))
             aliases = result.scalars().all()
-            
+
             for entry in aliases:
                 if re.search(rf"\b{re.escape(entry.alias)}\b", text):
                     return entry.city_id
         return None
 
-    def _map_to_existing_city(self, city_name: str) -> str:
-        """Map a free-text city name to our internal city_id."""
+    async def _map_ai_city(self, city_name: str) -> Optional[str]:
+        """Map an AI-extracted city name to our internal city_id."""
         normalized = city_name.lower().strip()
-        for city_id, cfg in CITIES.items():
-            if normalized == cfg.name.lower() or normalized in cfg.name.lower() or cfg.name.lower() in normalized:
-                return city_id
-        return "unknown"
+        cities = await self._load_cities()
+
+        for city in cities:
+            city_name_lower = city["name"].lower()
+            # Exact match
+            if normalized == city_name_lower:
+                return city["city_id"]
+            # Partial match (e.g., "New York" matches "New York City")
+            if normalized in city_name_lower or city_name_lower in normalized:
+                return city["city_id"]
+        return None
 
     async def _save_alias(self, alias: str, city_id: str):
         """Persist a new alias to the database."""
@@ -96,6 +125,10 @@ class CityResolver:
                 await session.commit()
             except Exception:
                 await session.rollback()
+
+    def invalidate_cache(self):
+        """Clear the cities cache to force reload on next lookup."""
+        self._cities_cache = None
 
 
 # Singleton

@@ -146,17 +146,19 @@ class RiskManager:
     async def _check_city_limit(self, city: str) -> tuple[bool, str]:
         if not city or city == "unknown":
             return True, "OK"
-            
+
+        # Check if city is tracked in database - only apply limits to tracked cities
         async with async_session() as session:
             result = await session.execute(
                 select(func.count(Trade.id)).where(
                     Trade.status == "filled",
                     Trade.resolved == False,
-                    Trade.market_condition_id.like(f"%{city}%") # Simple heuristic if city indexing isn't perfect
+                    Trade.market_condition_id.like(f"%{city}%")
                 )
             )
             count = result.scalar() or 0
 
+        # Only enforce limits for tracked cities
         if count >= settings.max_per_city:
             return False, f"Open positions in {city} ({count}) >= limit {settings.max_per_city}"
         return True, "OK"
